@@ -77,6 +77,16 @@ export default function LoginPage() {
           Create one
         </Link>
       </p>
+
+      <div className="mt-8 pt-6 border-t border-black/10 text-center">
+        <p className="text-[11px] text-warm-gray mb-2">Jesteś sprzedawcą?</p>
+        <Link
+          href="/seller/login"
+          className="text-[12px] text-charcoal underline hover:opacity-60 transition-opacity"
+        >
+          Przejdź do panelu sprzedawcy →
+        </Link>
+      </div>
     </div>
   );
 }
