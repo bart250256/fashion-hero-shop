@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { useSellerAuth } from "@/components/seller-auth-provider";
+import { PromoteProductModal } from "@/components/promote-product-modal";
+import { track } from "@/lib/track";
 
 const mockStats = [
   { label: "Przychód (maj)", value: "14 820 zł", change: "+12%", up: true },
@@ -23,11 +25,11 @@ const mockOrders = [
 ];
 
 const mockProducts = [
-  { name: "Runner Lite", sku: "RL-GRY", price: "349 zł", stock: 23, sold: 41, image: "/images/products/product-1.jpg" },
-  { name: "CloudStep Pro", sku: "CSP-BEZ", price: "529 zł", stock: 8, sold: 29, image: "/images/products/product-3.jpg" },
-  { name: "Urban Trek", sku: "UT-BLK", price: "419 zł", stock: 15, sold: 18, image: "/images/products/product-5.jpg" },
-  { name: "Soft Walk", sku: "SW-WHT", price: "299 zł", stock: 31, sold: 55, image: "/images/products/product-7.jpg" },
-  { name: "Trail Boss", sku: "TB-KHK", price: "599 zł", stock: 4, sold: 12, image: "/images/products/product-9.jpg" },
+  { name: "Runner Lite", sku: "RL-GRY", price: "349 zł", views: 1840, viewsChange: 12, sold: 41, image: "/images/products/product-1.jpg" },
+  { name: "CloudStep Pro", sku: "CSP-BEZ", price: "529 zł", views: 973, viewsChange: -5, sold: 29, image: "/images/products/product-3.jpg" },
+  { name: "Urban Trek", sku: "UT-BLK", price: "419 zł", views: 1205, viewsChange: 8, sold: 18, image: "/images/products/product-5.jpg" },
+  { name: "Soft Walk", sku: "SW-WHT", price: "299 zł", views: 2310, viewsChange: 21, sold: 55, image: "/images/products/product-7.jpg" },
+  { name: "Trail Boss", sku: "TB-KHK", price: "599 zł", views: 418, viewsChange: -11, sold: 12, image: "/images/products/product-9.jpg" },
 ];
 
 const revenueWeeks = [
@@ -225,6 +227,14 @@ function OrdersView() {
 }
 
 function ProductsView() {
+  const [promoteSku, setPromoteSku] = useState<string | null>(null);
+  const activeProduct = mockProducts.find((p) => p.sku === promoteSku) ?? null;
+
+  function openPromote(p: (typeof mockProducts)[number]) {
+    track("promote_button_click", { sku: p.sku, productName: p.name });
+    setPromoteSku(p.sku);
+  }
+
   return (
     <div>
       <div className="flex items-center justify-between mb-8">
@@ -239,7 +249,7 @@ function ProductsView() {
 
       <div className="bg-white rounded-2xl border border-black/5 overflow-hidden">
         <div className="px-6 py-3 border-b border-black/5 grid gap-4 items-center" style={{ gridTemplateColumns: "2fr 1fr 1fr 1fr 1fr" }}>
-          {["Produkt", "SKU", "Cena", "Stan magazynowy", "Sprzedano"].map((h) => (
+          {["Produkt", "SKU", "Cena", "Wyświetlenia", "Promocja"].map((h) => (
             <span key={h} className="text-[11px] font-medium uppercase tracking-wide text-warm-gray">
               {h}
             </span>
@@ -256,22 +266,32 @@ function ProductsView() {
               </div>
               <span className="text-[12px] text-warm-gray font-mono">{p.sku}</span>
               <span className="text-[13px] text-charcoal">{p.price}</span>
-              <span className={`text-[13px] font-medium ${p.stock <= 5 ? "text-red-600" : "text-charcoal"}`}>
-                {p.stock} szt.{p.stock <= 5 && " ⚠"}
+              <span className="text-[13px] text-charcoal">
+                {p.views.toLocaleString("pl")}{" "}
+                <span className={`text-[12px] font-medium ${p.viewsChange >= 0 ? "text-green-600" : "text-red-500"}`}>
+                  ({p.viewsChange >= 0 ? "+" : ""}{p.viewsChange}%)
+                </span>
               </span>
-              <div className="flex items-center gap-2">
-                <div className="h-1.5 bg-[#ece9e2] rounded-full flex-1 max-w-[60px]">
-                  <div
-                    className="h-full bg-charcoal rounded-full"
-                    style={{ width: `${Math.min((p.sold / 60) * 100, 100)}%` }}
-                  />
-                </div>
-                <span className="text-[12px] text-warm-gray">{p.sold}</span>
-              </div>
+              <button
+                type="button"
+                onClick={() => openPromote(p)}
+                aria-label="Promuj produkty — wkrótce — kliknij aby dowiedzieć się więcej"
+                title="kliknij aby dowiedzieć się więcej"
+                className="bg-charcoal text-white text-[11px] font-medium uppercase tracking-wide px-3 py-2 rounded-lg hover:bg-charcoal-light transition-colors text-left leading-tight"
+              >
+                Promuj produkty — wkrótce
+              </button>
             </div>
           ))}
         </div>
       </div>
+
+      <PromoteProductModal
+        open={activeProduct !== null}
+        productName={activeProduct?.name ?? ""}
+        sku={activeProduct?.sku ?? ""}
+        onClose={() => setPromoteSku(null)}
+      />
     </div>
   );
 }
