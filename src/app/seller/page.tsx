@@ -47,14 +47,36 @@ const statusColors: Record<string, string> = {
   Dostarczone: "bg-green-50 text-green-700",
 };
 
+// Klucz localStorage — okno o nowej funkcji „Ceny i popyt" pokazujemy raz na sprzedawcę.
+const FEATURE_ANNOUNCEMENT_KEY = "fashionhero_seen_pricing_announcement";
+
 export default function SellerDashboard() {
   const { seller, logout } = useSellerAuth();
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<"dashboard" | "orders" | "products" | "pricing">("dashboard");
+  // Okno o nowej funkcji „Ceny i popyt” pokazujemy raz na sprzedawcę. Sprawdzamy
+  // localStorage przy montowaniu; renderujemy je dopiero gdy seller jest zalogowany.
+  const [showAnnouncement, setShowAnnouncement] = useState(() => {
+    if (typeof window === "undefined") return false;
+    try {
+      return !localStorage.getItem(FEATURE_ANNOUNCEMENT_KEY);
+    } catch {
+      return false;
+    }
+  });
 
   useEffect(() => {
     if (!seller) router.push("/seller/login");
   }, [seller, router]);
+
+  const dismissAnnouncement = () => {
+    try {
+      localStorage.setItem(FEATURE_ANNOUNCEMENT_KEY, "1");
+    } catch {
+      // ignore
+    }
+    setShowAnnouncement(false);
+  };
 
   if (!seller) return null;
 
@@ -105,6 +127,91 @@ export default function SellerDashboard() {
         {activeTab === "products" && <ProductsView />}
         {activeTab === "pricing" && <PricingView seller={seller} />}
       </main>
+
+      {showAnnouncement && seller && (
+        <FeatureAnnouncementModal
+          onExplore={() => {
+            setActiveTab("pricing");
+            dismissAnnouncement();
+          }}
+          onClose={dismissAnnouncement}
+        />
+      )}
+    </div>
+  );
+}
+
+/**
+ * Okno powitalne po zalogowaniu — informuje sprzedawcę o nowej zakładce
+ * „Ceny i popyt". CTA przenosi go bezpośrednio do tej zakładki (góra lejka
+ * walidacji popytu z docs/pro-pricing-experiment.md).
+ */
+function FeatureAnnouncementModal({
+  onExplore,
+  onClose,
+}: {
+  onExplore: () => void;
+  onClose: () => void;
+}) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 p-0 sm:p-4">
+      <div className="bg-white w-full sm:max-w-md rounded-t-2xl sm:rounded-2xl max-h-[92vh] overflow-auto">
+        {/* Kolorowy pasek nagłówka — spójny z kafelkami Pro */}
+        <div
+          className="h-1.5 w-full"
+          style={{ background: "linear-gradient(90deg, #6366f1, #a855f7, #ec4899)" }}
+        />
+        <div className="px-6 py-5 flex items-start justify-between gap-4">
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-charcoal bg-[#ece9e2] px-2 py-0.5 rounded">
+              Nowość
+            </span>
+          </div>
+          <button
+            onClick={onClose}
+            className="text-warm-gray hover:text-charcoal text-[20px] leading-none -mt-1"
+            aria-label="Zamknij"
+          >
+            ×
+          </button>
+        </div>
+
+        <div className="px-6 pb-6">
+          <h2 className="text-[18px] font-medium text-charcoal mb-2">
+            Poznaj „Ceny i popyt” 📈
+          </h2>
+          <p className="text-[13px] text-warm-gray leading-relaxed mb-4">
+            Nowa zakładka w Twoim panelu pokazuje, jak Twoje ceny wypadają na tle
+            kategorii i co kupujący wybierają teraz — na danych z rynku FashionHero.
+          </p>
+
+          <ul className="space-y-2 mb-6">
+            {[
+              "Mediana cen kategorii — czy nie sprzedajesz za tanio lub za drogo",
+              "Twój współczynnik konwersji vs kategoria",
+              "Co teraz kupują — rosnący popyt z ostatnich 7 dni",
+            ].map((item) => (
+              <li key={item} className="flex items-start gap-2 text-[13px] text-charcoal">
+                <span className="text-green-600 mt-0.5" aria-hidden>✓</span>
+                <span>{item}</span>
+              </li>
+            ))}
+          </ul>
+
+          <button
+            onClick={onExplore}
+            className="w-full bg-charcoal text-white text-[12px] font-medium uppercase tracking-wide px-5 py-3 rounded-lg hover:bg-charcoal-light transition-colors"
+          >
+            Zobacz „Ceny i popyt”
+          </button>
+          <button
+            onClick={onClose}
+            className="w-full text-[12px] text-warm-gray hover:text-charcoal transition-colors mt-3"
+          >
+            Może później
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
@@ -615,7 +722,7 @@ function ActivateProModal({
           <div>
             <h2 className="text-[16px] font-medium text-charcoal">Aktywuj Pro</h2>
             <p className="text-[13px] text-warm-gray mt-0.5">
-              199 zł/mies · odblokowuje „{feature}"
+              199 zł/mies · odblokowuje „{feature}”
             </p>
           </div>
           <button
